@@ -80,7 +80,7 @@ export default function Page({
   }, [tableData, csvFileName]);
 
   return (
-    <div>
+    <div className="max-lg:mx-4 mx-12">
       <div className="container mx-auto py-10">
         <Card>
           <CardHeader>
