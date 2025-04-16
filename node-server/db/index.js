@@ -8,8 +8,8 @@ const password = process.env.CLICKHOUSE_PASSWORD || "clickhouse"; // Default pas
 // ClickHouse Client Configuration
 const clickhouseClient = createClient({
   url: `http://${host}:${port}`,
-  password: password,
   username: username,
+  password: password,
 });
 
 module.exports = clickhouseClient;

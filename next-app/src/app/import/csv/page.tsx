@@ -32,6 +32,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import axios from "@/lib/axios";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface TableData {
   [key: string]: string | number | boolean | null;
@@ -56,15 +59,18 @@ const dataTypes: { [key: string]: string } = {
   date: "Date",
 };
 
-export default function CSVReaderPage() {
+export default function Page() {
+  const router = useRouter();
   const [tableData, setTableData] = useState<TableData[]>([]);
   const [columns, setColumns] = useState<Column[]>([]);
   const [columnTypes, setColumnsTypes] = useState<ColumnType[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tableName, setTableName] = useState<string>("");
   const [delimiter, setDelimiter] = useState<string>("");
 
   const resetData = useCallback(() => {
+    setTableName("");
     setTableData([]);
     setColumns([]);
     setColumnsTypes([]);
@@ -72,8 +78,15 @@ export default function CSVReaderPage() {
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
+      resetData();
       if (e.target.files && e.target.files[0]) {
         setFile(e.target.files[0]);
+        setTableName(
+          (() => {
+            const arr = e.target.files[0].name.split(".");
+            return arr.slice(0, -1).join(".");
+          })()
+        );
         setError(null);
       }
     },
@@ -88,9 +101,35 @@ export default function CSVReaderPage() {
     []
   );
 
-  const handleTableUpload = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {},
+  const handleTableNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setTableName(e.target.value);
+    },
     []
+  );
+
+  const handleTableUpload = useCallback(
+    async (e: React.MouseEvent<HTMLButtonElement>) => {
+      try {
+        const schema = columnTypes
+          .map((ele) => [ele.key, dataTypes[ele.type]].join(" "))
+          .join(", ");
+        const createTableResponse = await axios.post(`/api/tables`, {
+          tableName,
+          schema,
+        });
+        const insertDataResponse = await axios.post(
+          `/api/tables/${tableName}/data`,
+          {
+            data: tableData,
+          }
+        );
+        router.push(`/tables/${tableName}`);
+      } catch (error: any) {
+        setError(error.response.data.error);
+      }
+    },
+    [file, tableName, columnTypes]
   );
 
   const parseCSV = useCallback(() => {
@@ -179,134 +218,158 @@ export default function CSVReaderPage() {
   }, [file, delimiter]);
 
   return (
-    <div className="container mx-auto py-10">
-      <Card>
-        <CardHeader>
-          <CardTitle>CSV Reader</CardTitle>
-          <CardDescription>Upload a CSV file to clickhouse.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <Input
-              id="csv-file-input"
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-              className="w-auto cursor-pointer"
-            />
-            <Button
-              className="cursor-pointer"
-              onClick={parseCSV}
-              disabled={!file}
-            >
-              Load CSV Data
-            </Button>
-          </div>
-          <div className="flex items-center gap-4">
-            <Label htmlFor="csv-file-delimiter" className="font-medium">
-              CSV Delimiter
-            </Label>
-            <Input
-              id="csv-file-delimiter"
-              placeholder="Auto detect by default"
-              onChange={handleDelimiterChange}
-              className="w-auto"
-            />
-          </div>
+    <div className="max-lg:mx-4 mx-12">
+      <div className="container mx-auto py-10">
+        <Card>
+          <CardHeader>
+            <CardTitle>CSV Reader</CardTitle>
+            <CardDescription>Upload a CSV file to clickhouse.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-4">
+              <Input
+                id="csv-file-input"
+                type="file"
+                accept=".csv"
+                onChange={handleFileChange}
+                className="w-auto cursor-pointer"
+              />
+              <Button
+                className="cursor-pointer"
+                onClick={parseCSV}
+                disabled={!file}
+              >
+                Load CSV Data
+              </Button>
+            </div>
+            <div className="flex items-center gap-4">
+              <Label htmlFor="csv-file-delimiter" className="font-medium">
+                CSV Delimiter
+              </Label>
+              <Input
+                id="csv-file-delimiter"
+                placeholder="Auto detect by default"
+                onChange={handleDelimiterChange}
+                className="w-auto"
+              />
+            </div>
 
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-          {tableData.length > 0 && columns.length > 0 && (
-            <div>
+            {tableData.length > 0 && columns.length > 0 && (
               <div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Column Name</TableHead>
-                      <TableHead className="w-1/3">Type</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {columnTypes.map((ele, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="capitalize">
-                          {ele.label}
-                        </TableCell>
-                        <TableCell>
-                          <Select defaultValue={ele.type}>
-                            <SelectTrigger className="w-full capitalize cursor-pointer">
-                              <SelectValue placeholder="Theme" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Object.keys(dataTypes).map((ele, index) => (
-                                <SelectItem
-                                  key={index}
-                                  value={ele}
-                                  className="capitalize cursor-pointer"
-                                >
-                                  {dataTypes[ele]}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
+                <div className="flex items-center gap-4">
+                  <Label htmlFor="csv-file-name" className="font-medium">
+                    Table Name
+                  </Label>
+                  <Input
+                    id="csv-file-name"
+                    placeholder="Table Name"
+                    defaultValue={tableName}
+                    onChange={handleTableNameChange}
+                    className="w-auto"
+                  />
+                </div>
+                <div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Column Name</TableHead>
+                        <TableHead className="w-1/3">Type</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              <div className="w-full overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="capitalize">
-                      {columns.map((column) => (
-                        <TableHead key={column.key}>{column.label}</TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tableData.map((rowData, index) => (
-                      <TableRow key={index}>
-                        {columns.map((column) => (
-                          <TableCell key={`${index}-${column.key}`}>
-                            {rowData[column.key] === null ? (
-                              <span className="italic text-gray-500">N/A</span>
-                            ) : typeof rowData[column.key] === "boolean" ? (
-                              rowData[column.key] ? (
-                                "Yes"
-                              ) : (
-                                "No"
-                              )
-                            ) : (
-                              rowData[column.key]
-                            )}
+                    </TableHeader>
+                    <TableBody>
+                      {columnTypes.map((ele, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="capitalize">
+                            {ele.label}
                           </TableCell>
+                          <TableCell>
+                            <Select defaultValue={ele.type}>
+                              <SelectTrigger className="w-full capitalize cursor-pointer">
+                                <SelectValue placeholder="Theme" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.keys(dataTypes).map((ele, index) => (
+                                  <SelectItem
+                                    key={index}
+                                    value={ele}
+                                    className="capitalize cursor-pointer"
+                                  >
+                                    {dataTypes[ele]}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="w-full overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="capitalize">
+                        {columns.map((column) => (
+                          <TableHead key={column.key}>{column.label}</TableHead>
                         ))}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {tableData.map((rowData, index) => (
+                        <TableRow key={index}>
+                          {columns.map((column) => (
+                            <TableCell key={`${index}-${column.key}`}>
+                              {rowData[column.key] === null ? (
+                                <span className="italic text-gray-500">
+                                  N/A
+                                </span>
+                              ) : typeof rowData[column.key] === "boolean" ? (
+                                rowData[column.key] ? (
+                                  "Yes"
+                                ) : (
+                                  "No"
+                                )
+                              ) : (
+                                rowData[column.key]
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="pt-4">
+                  <Button
+                    onClick={handleTableUpload}
+                    className="cursor-pointer"
+                  >
+                    Upload Table
+                  </Button>
+                </div>
               </div>
-              <div className="pt-4">
-                <Button onClick={handleTableUpload} className="cursor-pointer">
-                  Upload Table
-                </Button>
+            )}
+            {tableData.length === 0 && !error && (
+              <div className="text-gray-500 text-center py-4">
+                No CSV data to display. Upload a file to see the data.
               </div>
-            </div>
-          )}
-          {tableData.length === 0 && !error && (
-            <div className="text-gray-500 text-center py-4">
-              No CSV data to display. Upload a file to see the data.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      <div className="flex justify-evenly">
+        <Link href={"/tables"}>
+          <Button className="cursor-pointer">Go Back</Button>
+        </Link>
+      </div>
     </div>
   );
 }

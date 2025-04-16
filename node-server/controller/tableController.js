@@ -31,10 +31,8 @@ tableController.deleteTable = tryCatch(async (req, res) => {
   const tableName = req.params.tableName;
 
   const query = `DROP TABLE ${tableName}`;
-  // TODO
-  throw new Error("NOPE");
-  //   await clickhouseClient.query({ query });
-  //   return res.json({ message: `Table ${tableName} deleted successfully` });
+  await clickhouseClient.query({ query });
+  return res.json({ message: `Table ${tableName} deleted successfully` });
 });
 
 tableController.createTable = tryCatch(async (req, res) => {
@@ -53,7 +51,8 @@ tableController.createTable = tryCatch(async (req, res) => {
 });
 
 tableController.insertTableData = tryCatch(async (req, res) => {
-  const { tableName, data } = req.body;
+  const tableName = req.params.tableName;
+  const { data } = req.body;
 
   if (!tableName || !data || !Array.isArray(data)) {
     return res
@@ -62,13 +61,11 @@ tableController.insertTableData = tryCatch(async (req, res) => {
   }
 
   const columns = Object.keys(data[0]);
-  const query = `INSERT INTO ${tableName} (${columns.join(", ")}) VALUES`;
-  const values = data.map((item) => columns.map((col) => item[col]));
+  let values = data.map((item) => columns.map((col) => item[col]));
 
   await clickhouseClient.insert({
     table: tableName,
     values: values,
-    format: "values", // Important:  Use 'values' format for arrays of arrays.
   });
 
   res.json({ message: `Data inserted into ${tableName} successfully` });

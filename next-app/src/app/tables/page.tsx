@@ -1,17 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; // Assuming your Shadcn UI components are in this path
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import axios from "@/lib/axios";
 import Link from "next/link";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { formatString } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -95,9 +89,11 @@ export default function Page() {
               <TableBody>
                 {names.map((name, index) => (
                   <TableRow key={index}>
-                    <Link href={`/tables/${name}`} className="block">
-                      <TableCell>{formatString(name)}</TableCell>
-                    </Link>
+                    <TableCell className="p-0">
+                      <Link href={`/tables/${name}`} className="block p-2">
+                        {formatString(name)}
+                      </Link>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

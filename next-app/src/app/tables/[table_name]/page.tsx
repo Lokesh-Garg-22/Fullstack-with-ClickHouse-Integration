@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { formatString } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { AxiosError } from "axios";
 
 interface TableData {
   [key: string]: string | number | boolean | null;
@@ -36,17 +37,15 @@ export default function Page({
   const [tableData, setTableData] = useState<TableData[]>([]);
   const [columns, setColumns] = useState<Column[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<String | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      console.log((await params).table_name);
       setTableName((await params).table_name);
       try {
         const response = await axios.get<TableData[]>(
           `/api/tables/${(await params).table_name}`
         );
-        console.log(response.data);
         setTableData(response.data);
         setColumns(
           response.data.length > 0
@@ -58,7 +57,9 @@ export default function Page({
         );
         setLoading(false);
       } catch (err: any) {
-        setError(err);
+        setError(
+          err instanceof AxiosError ? err.response?.data.error : err.message
+        );
         setLoading(false);
       }
     };
@@ -115,7 +116,7 @@ export default function Page({
     );
   }
 
-  function Error({ error }: { error: Error }) {
+  function Error({ error }: { error: String }) {
     return (
       <div className="container mx-auto py-10">
         <Card>
@@ -123,7 +124,7 @@ export default function Page({
             <CardTitle>Error</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-red-500">Error: {error.message}</p>
+            <p className="text-red-500">Error: {error}</p>
           </CardContent>
         </Card>
       </div>
@@ -192,6 +193,9 @@ export default function Page({
       <div className="flex justify-evenly">
         <Link href={"/tables"}>
           <Button className="cursor-pointer">Go Back</Button>
+        </Link>
+        <Link href={`/export/csv/${tableName}`}>
+          <Button className="cursor-pointer">Export Table</Button>
         </Link>
         <Button onClick={handleDeleteTable} className="cursor-pointer">
           Delete Table

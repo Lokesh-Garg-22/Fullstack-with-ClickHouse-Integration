@@ -1,57 +1,22 @@
-"use client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
 
-import axios from "@/lib/axios";
-import Head from "next/head";
-import { useEffect, useState } from "react";
-
-interface DataItem {
-  [key: string]: any; // Allows arbitrary properties with any type
-}
-
-const Home = () => {
-  const [data, setData] = useState<DataItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get<DataItem[]>("/api/data");
-        console.log(response.data);
-        setData(response.data);
-        setLoading(false);
-      } catch (err: any) {
-        setError(err.message);
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  if (loading) {
-    return <p>Loading data...</p>;
-  }
-
-  if (error) {
-    return <p>Error: {error}</p>;
-  }
-
+export default function Page() {
   return (
-    <div>
-      <Head>
-        <title>Next.js with ClickHouse</title>
-      </Head>
-      <main>
-        <h1>Data from ClickHouse</h1>
-        <ul>
-          {data.map((row, index) => (
-            <li key={index}>{JSON.stringify(row)}</li>
-          ))}
-        </ul>
-      </main>
+    <div className="max-lg:mx-4 mx-12">
+      <div className="container mx-auto py-10">
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="text-4xl">Next.js with ClickHouse</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center my-16">
+            <Link href={"/tables"}>
+              <Button>Get Started</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
-};
-
-export default Home;
+}
